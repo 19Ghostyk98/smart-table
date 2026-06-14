@@ -1,24 +1,47 @@
 import {cloneTemplate} from "../lib/utils.js";
 
-/**
- * Инициализирует таблицу и вызывает коллбэк при любых изменениях и нажатиях на кнопки
- *
- * @param {Object} settings
- * @param {(action: HTMLButtonElement | undefined) => void} onAction
- * @returns {{container: Node, elements: *, render: render}}
- */
 export function initTable(settings, onAction) {
     const {tableTemplate, rowTemplate, before, after} = settings;
     const root = cloneTemplate(tableTemplate);
 
-    // @todo: #1.2 —  вывести дополнительные шаблоны до и после таблицы
+    if (before && before.length) {
+        [...before].reverse().forEach(templateName => {
+            const cloned = cloneTemplate(templateName);
+            root[templateName] = cloned;
+            root.container.prepend(cloned.container);
+            if (cloned.elements) {
+                Object.assign(root.elements, cloned.elements);
+            }
+        });
+    }
 
-    // @todo: #1.3 —  обработать события и вызвать onAction()
+    if (after && after.length) {
+        after.forEach(templateName => {
+            const cloned = cloneTemplate(templateName);
+            root[templateName] = cloned;
+            root.container.append(cloned.container);
+            if (cloned.elements) {
+                Object.assign(root.elements, cloned.elements);
+            }
+        });
+    }
 
     const render = (data) => {
-        // @todo: #1.1 — преобразовать данные в массив строк на основе шаблона rowTemplate
-        const nextRows = [];
-        root.elements.rows.replaceChildren(...nextRows);
+        const nextRows = data.map(item => {
+            const row = cloneTemplate(rowTemplate);
+            
+            Object.keys(item).forEach(key => {
+                if (row.elements[key]) {
+                    row.elements[key].textContent = item[key];
+                }
+            });
+            
+            return row.container;
+        });
+        
+        if (root.elements.rows) {
+            root.elements.rows.replaceChildren(...nextRows);
+        }
     }
 
     return {...root, render};
